@@ -1,10 +1,12 @@
-# CoPilot - Conditional DDPM Implementation
+# CoPilot - Conditional DDPM Implementation (3D Support)
 
 This repository contains an implementation of a Conditional Denoising Diffusion Probabilistic Model (DDPM) for image-to-image translation tasks, based on [junbopeng/conditional_DDPM](https://github.com/junbopeng/conditional_DDPM).
 
+**Now supports 3D volumetric data!** The implementation works with various 3D image sizes such as (4, 128, 128), (8, 64, 64), or any other depth/height/width combinations.
+
 ## Overview
 
-A general framework for image-to-image translation using conditional denoising diffusion probabilistic models. Originally designed for CBCT-to-CT image translation, but can be adapted to various image translation tasks.
+A general framework for image-to-image translation using conditional denoising diffusion probabilistic models. Originally designed for CBCT-to-CT image translation, but can be adapted to various image translation tasks including 3D medical imaging.
 
 ## Reference Paper
 
@@ -22,7 +24,7 @@ If you use this code, please cite:
 
 ## Quick Start with Dummy Data
 
-Run the demo script to see the model in action with randomly generated dummy data:
+Run the demo script to see the model in action with randomly generated dummy 3D data:
 
 ```bash
 pip install -r requirements.txt
@@ -30,20 +32,39 @@ python demo.py
 ```
 
 This will:
-1. Generate dummy training and test data
-2. Train a small model for 3 epochs
+1. Generate dummy 3D training and test data (shape: 4x64x64)
+2. Train a small 3D model for 3 epochs
 3. Run inference on test samples
 4. Save model checkpoints to `./Checkpoints/demo/`
 
+### Using Different 3D Image Sizes
+
+You can easily test with different 3D shapes like (4, 128, 128) or (8, 64, 64):
+
+```python
+from demo import generate_dummy_data, run_demo
+
+# Example 1: 4 depth slices, 128x128 spatial
+generate_dummy_data(image_shape=(4, 128, 128), num_train=10, num_test=2)
+run_demo(num_epochs=5, batch_size=2, image_shape=(4, 128, 128))
+
+# Example 2: 8 depth slices, 64x64 spatial
+generate_dummy_data(image_shape=(8, 64, 64), num_train=10, num_test=2)
+run_demo(num_epochs=5, batch_size=2, image_shape=(8, 64, 64))
+```
+
 ## Running Tests
 
-To verify the implementation works correctly:
+To verify the implementation works correctly with 3D data:
 
 ```bash
 python test_components.py
 ```
 
-This runs unit tests for all core components (UNet, diffusion trainer/sampler, and data generation).
+This runs unit tests for all core components including:
+- 3D U-Net model with various sizes (4x128x128, 8x64x64, etc.)
+- Diffusion trainer/sampler with 3D data
+- 3D data generation and loading
 
 ## Training with Your Own Data
 
@@ -51,14 +72,16 @@ This runs unit tests for all core components (UNet, diffusion trainer/sampler, a
 ```
 data/
 ├── train/
-│   ├── a/  # Target images (e.g., CT scans)
-│   └── b/  # Condition images (e.g., CBCT scans)
+│   ├── a/  # Target volumes (e.g., CT scans)
+│   └── b/  # Condition volumes (e.g., CBCT scans)
 └── test/
-    ├── a/  # Target test images
-    └── b/  # Condition test images
+    ├── a/  # Target test volumes
+    └── b/  # Condition test volumes
 ```
 
 2. Images should be saved as `.npy` files (numpy arrays)
+   - For 3D data: shape should be (D, H, W) - e.g., (4, 128, 128) or (8, 64, 64)
+   - For 2D data: shape should be (H, W) - e.g., (256, 256) (also supported)
 
 3. Run training:
 ```bash
@@ -75,14 +98,15 @@ python Test_condition.py
 This implementation includes:
 
 - **Conditional DDPM**: The model uses a conditional denoising diffusion process where the generation is guided by a condition image (e.g., CBCT for CT generation)
-- **U-Net Architecture**: A time-conditioned U-Net with attention mechanisms, residual blocks, and skip connections
+- **3D U-Net Architecture**: A time-conditioned 3D U-Net with attention mechanisms, residual blocks, and skip connections
 - **Flexible Configuration**: Easy to modify hyperparameters like timesteps, channel counts, and attention layers
 - **GPU/CPU Support**: Automatically detects and uses GPU if available, falls back to CPU otherwise
+- **3D Data Support**: Works with volumetric data of various sizes (e.g., 4x128x128, 8x64x64, etc.)
 
 The model works by:
-1. Adding noise to target images over T timesteps (forward process)
-2. Learning to denoise conditioned on the input image (training)
-3. Generating new images from random noise by iterative denoising (inference)
+1. Adding noise to target images/volumes over T timesteps (forward process)
+2. Learning to denoise conditioned on the input image/volume (training)
+3. Generating new images/volumes from random noise by iterative denoising (inference)
 
 ## Model Configuration
 
@@ -104,5 +128,7 @@ Key hyperparameters in the scripts:
 ## Notes
 
 - The model supports both CPU and GPU training
+- Supports 3D volumetric data with various depth/height/width combinations
+- The architecture uses 3D convolutions (Conv3d) for processing volumetric data
 - Checkpoints are saved periodically during training
 - Test outputs are saved as raw binary files

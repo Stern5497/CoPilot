@@ -1,5 +1,5 @@
 """
-Unit tests for conditional DDPM components
+Unit tests for conditional DDPM components (3D support)
 """
 import os
 import sys
@@ -11,9 +11,9 @@ from Diffusion_condition import GaussianDiffusionTrainer_cond, GaussianDiffusion
 from Model_condition import UNet
 
 
-def test_unet_model():
-    """Test UNet model initialization and forward pass"""
-    print("Testing UNet model...")
+def test_unet_model_3d():
+    """Test UNet model initialization and forward pass with 3D data"""
+    print("Testing UNet model (3D)...")
     
     T = 50
     ch = 32
@@ -24,20 +24,48 @@ def test_unet_model():
     
     model = UNet(T, ch, ch_mult, attn, num_res_blocks, dropout)
     
-    # Test forward pass
+    # Test forward pass with 3D data
     batch_size = 2
-    x = torch.randn(batch_size, 2, 128, 128)  # 2 channels (noisy image + condition)
+    x = torch.randn(batch_size, 2, 4, 64, 64)  # 2 channels, 4 depth, 64x64 spatial
     t = torch.randint(0, T, (batch_size,))
     
     output = model(x, t)
     
-    assert output.shape == (batch_size, 1, 128, 128), f"Expected shape (2, 1, 128, 128), got {output.shape}"
-    print("✓ UNet model test passed")
+    assert output.shape == (batch_size, 1, 4, 64, 64), f"Expected shape (2, 1, 4, 64, 64), got {output.shape}"
+    print("✓ UNet model test (3D) passed")
 
 
-def test_diffusion_trainer():
-    """Test diffusion trainer"""
-    print("\nTesting diffusion trainer...")
+def test_unet_model_different_sizes():
+    """Test UNet model with different 3D sizes"""
+    print("\nTesting UNet model with different sizes...")
+    
+    T = 50
+    ch = 32  # Changed from 16 to 32 to be divisible by GroupNorm groups
+    ch_mult = [1, 2]
+    attn = []
+    num_res_blocks = 1
+    dropout = 0.1
+    
+    model = UNet(T, ch, ch_mult, attn, num_res_blocks, dropout)
+    
+    # Test with shape (8, 64, 64)
+    batch_size = 1
+    x = torch.randn(batch_size, 2, 8, 64, 64)
+    t = torch.randint(0, T, (batch_size,))
+    output = model(x, t)
+    assert output.shape == (batch_size, 1, 8, 64, 64), f"Expected shape (1, 1, 8, 64, 64), got {output.shape}"
+    
+    # Test with shape (4, 128, 128)
+    x = torch.randn(batch_size, 2, 4, 128, 128)
+    output = model(x, t)
+    assert output.shape == (batch_size, 1, 4, 128, 128), f"Expected shape (1, 1, 4, 128, 128), got {output.shape}"
+    
+    print("✓ UNet model test with different sizes passed")
+
+
+def test_diffusion_trainer_3d():
+    """Test diffusion trainer with 3D data"""
+    print("\nTesting diffusion trainer (3D)...")
     
     T = 50
     beta_1 = 1e-4
@@ -46,20 +74,20 @@ def test_diffusion_trainer():
     model = UNet(T, 32, [1, 2, 2], [1], 1, 0.1)
     trainer = GaussianDiffusionTrainer_cond(model, beta_1, beta_T, T)
     
-    # Test training step
+    # Test training step with 3D data
     batch_size = 2
-    x_0 = torch.randn(batch_size, 2, 128, 128)  # 2 channels (target + condition)
+    x_0 = torch.randn(batch_size, 2, 4, 64, 64)  # 2 channels (target + condition)
     
     loss = trainer(x_0)
     
     assert isinstance(loss.item(), float), "Loss should be a float"
     assert loss.item() >= 0, "Loss should be non-negative"
-    print("✓ Diffusion trainer test passed")
+    print("✓ Diffusion trainer test (3D) passed")
 
 
-def test_diffusion_sampler():
-    """Test diffusion sampler"""
-    print("\nTesting diffusion sampler...")
+def test_diffusion_sampler_3d():
+    """Test diffusion sampler with 3D data"""
+    print("\nTesting diffusion sampler (3D)...")
     
     T = 20  # Reduced for faster testing
     beta_1 = 1e-4
@@ -68,29 +96,29 @@ def test_diffusion_sampler():
     model = UNet(T, 32, [1, 2], [], 1, 0.1)
     sampler = GaussianDiffusionSampler_cond(model, beta_1, beta_T, T)
     
-    # Test sampling
+    # Test sampling with 3D data
     batch_size = 1
-    x_T = torch.randn(batch_size, 2, 64, 64)  # Smaller size for faster test
+    x_T = torch.randn(batch_size, 2, 4, 32, 32)  # Smaller size for faster test
     
     with torch.no_grad():
         x_0 = sampler(x_T)
     
     assert x_0.shape == x_T.shape, f"Expected shape {x_T.shape}, got {x_0.shape}"
     assert torch.all(x_0 >= -1) and torch.all(x_0 <= 1), "Output should be clipped to [-1, 1]"
-    print("✓ Diffusion sampler test passed")
+    print("✓ Diffusion sampler test (3D) passed")
 
 
-def test_data_generation():
-    """Test that we can generate and load dummy data"""
-    print("\nTesting data generation...")
+def test_data_generation_3d():
+    """Test that we can generate and load 3D dummy data"""
+    print("\nTesting 3D data generation...")
     
     from demo import generate_dummy_data
     from datasets import ImageDataset
     from torch.utils.data import DataLoader
     
-    # Generate test data
-    test_dir = "/tmp/test_data"
-    generate_dummy_data(data_dir=test_dir, image_size=64, num_train=3, num_test=1)
+    # Generate test data with 3D shape
+    test_dir = "/tmp/test_data_3d"
+    generate_dummy_data(data_dir=test_dir, image_shape=(4, 64, 64), num_train=3, num_test=1)
     
     # Try to load it
     dataset = ImageDataset(test_dir, transforms_=False, unaligned=True, mode="train")
@@ -98,27 +126,28 @@ def test_data_generation():
     
     batch = next(iter(dataloader))
     assert "a" in batch and "b" in batch, "Batch should contain 'a' and 'b' keys"
-    assert batch["a"].shape[0] == 2, "Batch size should be 2"
-    assert batch["a"].shape[1] == 1, "Should have 1 channel"
+    assert batch["a"].shape == (2, 1, 4, 64, 64), f"Expected shape (2, 1, 4, 64, 64), got {batch['a'].shape}"
+    assert batch["b"].shape == (2, 1, 4, 64, 64), f"Expected shape (2, 1, 4, 64, 64), got {batch['b'].shape}"
     
     # Clean up
     import shutil
     shutil.rmtree(test_dir)
     
-    print("✓ Data generation test passed")
+    print("✓ 3D data generation test passed")
 
 
 def run_all_tests():
     """Run all tests"""
     print("=" * 60)
-    print("Running Conditional DDPM Tests")
+    print("Running Conditional DDPM Tests (3D Support)")
     print("=" * 60)
     
     try:
-        test_unet_model()
-        test_diffusion_trainer()
-        test_diffusion_sampler()
-        test_data_generation()
+        test_unet_model_3d()
+        test_unet_model_different_sizes()
+        test_diffusion_trainer_3d()
+        test_diffusion_sampler_3d()
+        test_data_generation_3d()
         
         print("\n" + "=" * 60)
         print("All tests passed! ✓")

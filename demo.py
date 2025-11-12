@@ -15,8 +15,17 @@ from Model_condition import UNet
 from datasets import ImageDataset
 
 
-def generate_dummy_data(data_dir="data", image_size=128, num_train=6, num_test=2):
-    """Generate dummy image data for training and testing"""
+def generate_dummy_data(data_dir="data", image_shape=(4, 128, 128), num_train=6, num_test=2):
+    """
+    Generate dummy 3D image data for training and testing
+    
+    Args:
+        data_dir: Directory to save data
+        image_shape: Shape of 3D images, e.g., (4, 128, 128) or (8, 64, 64)
+                    Can also be 2D like (128, 128) for backward compatibility
+        num_train: Number of training samples
+        num_test: Number of test samples
+    """
     print("Generating dummy data...")
     
     # Create directories
@@ -28,26 +37,34 @@ def generate_dummy_data(data_dir="data", image_size=128, num_train=6, num_test=2
     # Generate training data
     for i in range(num_train):
         # Image A (target)
-        img_a = np.random.randn(image_size, image_size).astype(np.float32)
+        img_a = np.random.randn(*image_shape).astype(np.float32)
         np.save(f"{data_dir}/train/a/img_{i:04d}.npy", img_a)
         
         # Image B (condition) - slightly correlated with A
-        img_b = img_a + 0.5 * np.random.randn(image_size, image_size).astype(np.float32)
+        img_b = img_a + 0.5 * np.random.randn(*image_shape).astype(np.float32)
         np.save(f"{data_dir}/train/b/img_{i:04d}.npy", img_b)
     
     # Generate test data
     for i in range(num_test):
-        img_a = np.random.randn(image_size, image_size).astype(np.float32)
+        img_a = np.random.randn(*image_shape).astype(np.float32)
         np.save(f"{data_dir}/test/a/img_{i:04d}.npy", img_a)
         
-        img_b = img_a + 0.5 * np.random.randn(image_size, image_size).astype(np.float32)
+        img_b = img_a + 0.5 * np.random.randn(*image_shape).astype(np.float32)
         np.save(f"{data_dir}/test/b/img_{i:04d}.npy", img_b)
     
-    print(f"Generated {num_train} training samples and {num_test} test samples (image size: {image_size}x{image_size})")
+    shape_str = "x".join(map(str, image_shape))
+    print(f"Generated {num_train} training samples and {num_test} test samples (image shape: {shape_str})")
 
 
-def run_demo(num_epochs=3, batch_size=2):
-    """Run a simple demo of the conditional DDPM"""
+def run_demo(num_epochs=3, batch_size=2, image_shape=(4, 64, 64)):
+    """
+    Run a simple demo of the conditional DDPM
+    
+    Args:
+        num_epochs: Number of training epochs
+        batch_size: Batch size for training
+        image_shape: Shape of images (D, H, W) for 3D or (H, W) for 2D
+    """
     
     # Configuration
     dataset_name = "data"
@@ -143,9 +160,10 @@ def run_demo(num_epochs=3, batch_size=2):
             cbct = Variable(batch["b"].type(Tensor))
             
             # Generate from random noise conditioned on cbct
-            # Get the actual image size from the batch
-            img_size = cbct.shape[-1]
-            noisyImage = torch.randn(size=[1, 1, img_size, img_size], device=device)
+            # Get the actual shape from the batch (works for both 2D and 3D)
+            # cbct shape: [B, 1, D, H, W] for 3D or [B, 1, H, W] for 2D
+            noise_shape = list(cbct.shape)
+            noisyImage = torch.randn(size=noise_shape, device=device)
             x_in = torch.cat((noisyImage, cbct), 1)
             x_out = sampler(x_in)
             
@@ -156,14 +174,15 @@ def run_demo(num_epochs=3, batch_size=2):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Conditional DDPM Demo")
+    print("Conditional DDPM Demo (3D Support)")
     print("=" * 60)
     
-    # Generate dummy data
-    generate_dummy_data(num_train=6, num_test=2, image_size=128)
+    # Generate dummy 3D data with shape (4, 64, 64)
+    image_shape = (4, 64, 64)
+    generate_dummy_data(num_train=6, num_test=2, image_shape=image_shape)
     
     # Run demo
-    run_demo(num_epochs=3, batch_size=2)
+    run_demo(num_epochs=3, batch_size=2, image_shape=image_shape)
     
     print("\n" + "=" * 60)
     print("All operations completed successfully!")

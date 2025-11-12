@@ -53,17 +53,19 @@ def test():
             ii = ii + 1
             print(ii)
             ct = Variable(batch1["a"].type(Tensor))
-            cbct = Variable(batch1["b"].type(Tensor)) #condition    
-            noisyImage = torch.randn(size=[1, 1, 256, 256], device=device)
+            cbct = Variable(batch1["b"].type(Tensor)) #condition
+            
+            # Generate noise with the same shape as cbct (supports both 2D and 3D)
+            noise_shape = list(cbct.shape)
+            noisyImage = torch.randn(size=noise_shape, device=device)
             x_in = torch.cat((noisyImage,cbct),1)
             x_out = sampler(x_in)
             
             # "inverse the normalized image to HU value"
             
-            fake = x_out[:,0,:,:]
-            fake = torch.unsqueeze(fake,1)
+            fake = x_out[:,0:1,:,:] if cbct.ndim == 4 else x_out[:,0:1,:,:,:]
 
-            img = torch.cat((cbct,fake,ct),3)
+            img = torch.cat((cbct,fake,ct), -1)  # Concatenate along last dimension
             img = img.cpu()
             img_save = torch.cat((img_save,img),1)
             img_tst = img_save.numpy()
