@@ -31,9 +31,19 @@ python demo.py
 
 This will:
 1. Generate dummy training and test data
-2. Train a small model for 5 epochs
+2. Train a small model for 3 epochs
 3. Run inference on test samples
 4. Save model checkpoints to `./Checkpoints/demo/`
+
+## Running Tests
+
+To verify the implementation works correctly:
+
+```bash
+python test_components.py
+```
+
+This runs unit tests for all core components (UNet, diffusion trainer/sampler, and data generation).
 
 ## Training with Your Own Data
 
@@ -59,6 +69,20 @@ python Train_condition.py
 ```bash
 python Test_condition.py
 ```
+
+## Implementation Details
+
+This implementation includes:
+
+- **Conditional DDPM**: The model uses a conditional denoising diffusion process where the generation is guided by a condition image (e.g., CBCT for CT generation)
+- **U-Net Architecture**: A time-conditioned U-Net with attention mechanisms, residual blocks, and skip connections
+- **Flexible Configuration**: Easy to modify hyperparameters like timesteps, channel counts, and attention layers
+- **GPU/CPU Support**: Automatically detects and uses GPU if available, falls back to CPU otherwise
+
+The model works by:
+1. Adding noise to target images over T timesteps (forward process)
+2. Learning to denoise conditioned on the input image (training)
+3. Generating new images from random noise by iterative denoising (inference)
 
 ## Model Configuration
 
