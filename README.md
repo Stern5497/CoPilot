@@ -1,12 +1,14 @@
-# CoPilot - Conditional DDPM Implementation (3D Support)
+# CoPilot - Conditional DDPM & CycleGAN Implementation (3D Support)
 
-This repository contains an implementation of a Conditional Denoising Diffusion Probabilistic Model (DDPM) for image-to-image translation tasks, based on [junbopeng/conditional_DDPM](https://github.com/junbopeng/conditional_DDPM).
+This repository contains implementations of two powerful models for image-to-image translation:
+1. **Conditional Denoising Diffusion Probabilistic Model (DDPM)** - based on [junbopeng/conditional_DDPM](https://github.com/junbopeng/conditional_DDPM)
+2. **CycleGAN** - based on [junyanz/pytorch-CycleGAN-and-pix2pix](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix)
 
-**Now supports 3D volumetric data!** The implementation works with various 3D image sizes such as (4, 128, 128), (8, 64, 64), or any other depth/height/width combinations.
+**Both models support 3D volumetric data!** They work with various 3D image sizes such as (4, 128, 128), (8, 64, 64), or any other depth/height/width combinations.
 
 ## Overview
 
-A general framework for image-to-image translation using conditional denoising diffusion probabilistic models. Originally designed for CBCT-to-CT image translation, but can be adapted to various image translation tasks including 3D medical imaging.
+A flexible framework for image-to-image translation supporting both paired (DDPM) and unpaired (CycleGAN) training scenarios. Originally designed for CBCT-to-CT image translation, but can be adapted to various image translation tasks including 3D medical imaging.
 
 ## Reference Paper
 
@@ -15,16 +17,43 @@ If you use this code, please cite:
 
 ## Files
 
+### Conditional DDPM
 - `Diffusion_condition.py` - Core diffusion process implementation (training and sampling)
-- `Model_condition.py` - U-Net architecture with time embeddings
+- `Model_condition.py` - 3D U-Net architecture with time embeddings
+- `Train_condition.py` - Training script for DDPM
+- `Test_condition.py` - Inference/testing script for DDPM
+
+### CycleGAN
+- `Model_CycleGAN.py` - 3D CycleGAN implementation with ResNet generators and PatchGAN discriminators
+- `demo_multi_model.py` - Unified demo script supporting both models
+
+### Shared Components
 - `datasets.py` - Dataset loader for paired image data
-- `Train_condition.py` - Training script
-- `Test_condition.py` - Inference/testing script
-- `demo.py` - Demo script with dummy data generation
+- `demo.py` - Original DDPM-only demo script
+- `examples_3d_sizes.py` - Examples with different 3D sizes
 
 ## Quick Start with Dummy Data
 
-Run the demo script to see the model in action with randomly generated dummy 3D data:
+### Option 1: Unified Demo (Supports Both Models)
+
+Run the multi-model demo script with model selection:
+
+```bash
+pip install -r requirements.txt
+
+# Run with Conditional DDPM (default)
+python demo_multi_model.py --model ddpm --epochs 3
+
+# Run with CycleGAN
+python demo_multi_model.py --model cyclegan --epochs 3
+
+# Customize 3D image size
+python demo_multi_model.py --model cyclegan --depth 8 --height 64 --width 64 --epochs 3
+```
+
+### Option 2: DDPM-Only Demo
+
+Run the original DDPM demo script:
 
 ```bash
 pip install -r requirements.txt
@@ -36,6 +65,30 @@ This will:
 2. Train a small 3D model for 3 epochs
 3. Run inference on test samples
 4. Save model checkpoints to `./Checkpoints/demo/`
+
+## Model Comparison
+
+| Feature | Conditional DDPM | CycleGAN |
+|---------|-----------------|----------|
+| Training Data | Paired images required | Unpaired images supported |
+| Architecture | U-Net with diffusion process | ResNet generators + PatchGAN discriminators |
+| Training Time | Slower (iterative denoising) | Faster (direct mapping) |
+| Quality | High quality, detailed | Good quality, fast inference |
+| Use Case | Medical imaging, precise translations | Style transfer, domain adaptation |
+
+### When to Use Which Model:
+
+- **Use DDPM when:**
+  - You have paired training data
+  - Quality is more important than speed
+  - You need precise pixel-level correspondence
+  - Medical imaging applications
+
+- **Use CycleGAN when:**
+  - You have unpaired training data
+  - Speed is important
+  - You need bidirectional translation (A↔B)
+  - Style transfer or domain adaptation tasks
 
 ### Using Different 3D Image Sizes
 
@@ -98,15 +151,24 @@ python Test_condition.py
 This implementation includes:
 
 - **Conditional DDPM**: The model uses a conditional denoising diffusion process where the generation is guided by a condition image (e.g., CBCT for CT generation)
-- **3D U-Net Architecture**: A time-conditioned 3D U-Net with attention mechanisms, residual blocks, and skip connections
+- **CycleGAN**: Unpaired image-to-image translation using cycle consistency loss and adversarial training
+- **3D Architectures**: Both models use 3D convolutions (Conv3d) for processing volumetric data
+  - DDPM: 3D U-Net with time conditioning and attention mechanisms
+  - CycleGAN: 3D ResNet generators and 3D PatchGAN discriminators
 - **Flexible Configuration**: Easy to modify hyperparameters like timesteps, channel counts, and attention layers
 - **GPU/CPU Support**: Automatically detects and uses GPU if available, falls back to CPU otherwise
 - **3D Data Support**: Works with volumetric data of various sizes (e.g., 4x128x128, 8x64x64, etc.)
 
-The model works by:
+### How DDPM Works:
 1. Adding noise to target images/volumes over T timesteps (forward process)
 2. Learning to denoise conditioned on the input image/volume (training)
 3. Generating new images/volumes from random noise by iterative denoising (inference)
+
+### How CycleGAN Works:
+1. Two generators (G_A: A→B, G_B: B→A) and two discriminators (D_A, D_B)
+2. Adversarial loss: generators fool discriminators
+3. Cycle consistency loss: G_B(G_A(A)) ≈ A and G_A(G_B(B)) ≈ B
+4. Optional identity loss: G_A(B) ≈ B and G_B(A) ≈ A
 
 ## Model Configuration
 
