@@ -111,13 +111,24 @@ run_demo(num_epochs=5, batch_size=2, image_shape=(8, 64, 64))
 To verify the implementation works correctly with 3D data:
 
 ```bash
+# Run core component tests
 python test_components.py
+
+# Run MHA file format support tests
+python test_mha_support.py
 ```
 
-This runs unit tests for all core components including:
+**Core component tests** (`test_components.py`) include:
 - 3D U-Net model with various sizes (4x128x128, 8x64x64, etc.)
 - Diffusion trainer/sampler with 3D data
 - 3D data generation and loading
+
+**MHA support tests** (`test_mha_support.py`) include:
+- MHA/MHD file loading
+- Mixed format support (.npy and .mha in same dataset)
+- DataLoader integration with MHA files
+- Different 3D shapes support
+- Backward compatibility with .npy files
 
 ## Training with Your Own Data
 
@@ -132,9 +143,15 @@ data/
     └── b/  # Condition test volumes
 ```
 
-2. Images should be saved as `.npy` files (numpy arrays)
-   - For 3D data: shape should be (D, H, W) - e.g., (4, 128, 128) or (8, 64, 64)
-   - For 2D data: shape should be (H, W) - e.g., (256, 256) (also supported)
+2. Supported file formats:
+   - **`.npy`** - NumPy arrays (original format)
+   - **`.mha`** - MetaImage format (medical imaging standard)
+   - **`.mhd`** - MetaImage header/raw format (medical imaging standard)
+   
+   For 3D data: shape should be (D, H, W) - e.g., (4, 128, 128) or (8, 64, 64)
+   For 2D data: shape should be (H, W) - e.g., (256, 256) (also supported)
+   
+   Note: MHA/MHD support requires SimpleITK (automatically installed via requirements.txt)
 
 3. Run training:
 ```bash

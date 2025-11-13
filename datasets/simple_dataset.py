@@ -3,8 +3,8 @@
 import glob
 import random
 import os
-import numpy as np #V
-import torch as torch #V
+import numpy as np
+import torch
 
 from torch.utils.data import Dataset
 from PIL import Image
